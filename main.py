@@ -42,12 +42,32 @@ for destination in sheet_data:
 
     if price < lowest:
         print(f"  Low price alert! £{price} (threshold: £{lowest})")
+
+        segments = cheapest_flight["itineraries"][0]["segments"]
+        departure_dt = segments[0]["departure"]["at"]
+        departure_date = departure_dt.split("T")[0]
+        arrival_date = segments[-1]["arrival"]["at"].split("T")[0]
+        stops = len(segments) - 1
+        stops_str = "Direct" if stops == 0 else f"{stops} stop(s)"
+        airlines = ", ".join(set(s["carrierCode"] for s in segments))
+
+        google_flights_link = (
+            f"https://www.google.com/travel/flights?q=flights+from+"
+            f"{ORIGIN_CITY_IATA}+to+{destination['iataCode']}+on+{departure_date}"
+        )
+
         notification_manager.send_emails(
             email_list=[DESTINATION_EMAIL],
             message=(
                 f"Low price alert!\n\n"
-                f"Only £{price} to fly from {ORIGIN_CITY_IATA} to {destination['city']} ({destination['iataCode']}).\n"
-                f"Your threshold was £{lowest}."
+                f"From:      {ORIGIN_CITY_IATA}\n"
+                f"To:        {destination['city']} ({destination['iataCode']})\n"
+                f"Date:      {departure_date}\n"
+                f"Arrives:   {arrival_date}\n"
+                f"Price:     £{price}\n"
+                f"Stops:     {stops_str}\n"
+                f"Airline(s): {airlines}\n\n"
+                f"Search on Google Flights:\n{google_flights_link}"
             )
         )
     else:
