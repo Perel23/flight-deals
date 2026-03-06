@@ -1,9 +1,12 @@
 import os
+import requests
 from datetime import datetime, timedelta
 from amadeus import Client, ResponseError
 from dotenv import load_dotenv
 
 load_dotenv()
+
+AMADEUS_TOKEN_URL = "https://test.api.amadeus.com/v1/security/oauth2/token"
 
 
 class FlightSearch:
@@ -12,6 +15,20 @@ class FlightSearch:
             client_id=os.getenv("AMADEUS_API_KEY"),
             client_secret=os.getenv("AMADEUS_SECRET"),
         )
+
+    def get_bearer_token(self):
+        response = requests.post(
+            url=AMADEUS_TOKEN_URL,
+            data={
+                "grant_type": "client_credentials",
+                "client_id": os.getenv("AMADEUS_API_KEY"),
+                "client_secret": os.getenv("AMADEUS_SECRET"),
+            },
+        )
+        response.raise_for_status()
+        token = response.json()["access_token"]
+        print(f"Bearer token: {token}")
+        return token
 
     def get_iata_code(self, city_name):
         response = self.amadeus.reference_data.locations.get(
