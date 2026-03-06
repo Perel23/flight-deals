@@ -1,5 +1,4 @@
 import os
-import time
 from dotenv import load_dotenv
 from data_manager import DataManager
 from flight_search import FlightSearch
@@ -18,25 +17,18 @@ ai_assistant = AIAssistant()
 
 sheet_data = data_manager.get_destination_data()
 
-# Fill in any missing data using Amadeus first, then Gemini as fallback
+# Fill in any missing data using Gemini
 for row in sheet_data:
     missing_iata = row["iataCode"] == ""
     missing_price = row["lowestPrice"] == 0
 
     if missing_iata or missing_price:
         print(f"Incomplete data for '{row['city']}' — asking Gemini...")
-
+        iata, price = ai_assistant.get_city_data(row["city"], ORIGIN_CITY_IATA)
         if missing_iata:
-            row["iataCode"] = flight_search.get_iata_code(row["city"])
-            time.sleep(1)
-
-        # Use Gemini if IATA still missing or price is 0
-        if row["iataCode"] == "" or missing_price:
-            iata, price = ai_assistant.get_city_data(row["city"], ORIGIN_CITY_IATA)
-            if row["iataCode"] == "":
-                row["iataCode"] = iata
-            if missing_price:
-                row["lowestPrice"] = price
+            row["iataCode"] = iata
+        if missing_price:
+            row["lowestPrice"] = price
 
 data_manager.update_destination_codes()
 
