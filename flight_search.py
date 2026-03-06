@@ -26,8 +26,8 @@ class FlightSearch:
     def check_flights(self, origin_city_code, destination_city_code):
         cheapest = None
 
-        for day_offset in range(1, 181):
-            departure_date = (datetime.now() + timedelta(days=day_offset)).strftime("%Y-%m-%d")
+        for week_offset in range(1, 27):
+            departure_date = (datetime.now() + timedelta(weeks=week_offset)).strftime("%Y-%m-%d")
             try:
                 response = self.amadeus.shopping.flight_offers_search.get(
                     originLocationCode=origin_city_code,
@@ -43,6 +43,6 @@ class FlightSearch:
                     if cheapest is None or price < float(cheapest["price"]["grandTotal"]):
                         cheapest = offer
             except ResponseError as error:
-                print(f"{departure_date}: {error}")
+                print(f"  {departure_date}: {error}")
 
         return cheapest

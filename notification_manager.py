@@ -1,5 +1,7 @@
 import os
 import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -15,8 +17,9 @@ class NotificationManager:
             connection.starttls()
             connection.login(MY_EMAIL, GMAIL_APP_PASSWORD)
             for email in email_list:
-                connection.sendmail(
-                    from_addr=MY_EMAIL,
-                    to_addrs=email,
-                    msg=f"Subject:New Low Price Flight!\n\n{message}"
-                )
+                msg = MIMEMultipart()
+                msg["Subject"] = "New Low Price Flight!"
+                msg["From"] = MY_EMAIL
+                msg["To"] = email
+                msg.attach(MIMEText(message, "plain", "utf-8"))
+                connection.sendmail(MY_EMAIL, email, msg.as_string())

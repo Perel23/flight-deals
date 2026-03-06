@@ -20,7 +20,7 @@ sheet_data = data_manager.get_destination_data()
 for row in sheet_data:
     if row["iataCode"] == "":
         row["iataCode"] = flight_search.get_iata_code(row["city"])
-        time.sleep(3)
+        time.sleep(1)
 
 data_manager.update_destination_codes()
 
