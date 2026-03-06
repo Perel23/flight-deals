@@ -72,4 +72,3 @@ python main.py
 | `data_manager.py` | Sheety API — reads and updates the Google Sheet |
 | `notification_manager.py` | Sends email alerts via Gmail SMTP |
 | `ai_assistant.py` | Gemini AI — auto-fills missing IATA codes and price thresholds |
-| `flight_data.py` | Placeholder for flight data structure |
