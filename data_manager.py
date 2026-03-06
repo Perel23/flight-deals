@@ -24,5 +24,4 @@ class DataManager:
                     "iataCode": city["iataCode"]
                 }
             }
-            response = requests.put(url=f"{SHEETY_ENDPOINT}/{city['id']}", json=new_data, headers=self.headers)
-            print(f"Updating {city['city']}: {response.status_code} {response.text}")
+            requests.put(url=f"{SHEETY_ENDPOINT}/{city['id']}", json=new_data, headers=self.headers)
