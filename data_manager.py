@@ -21,7 +21,8 @@ class DataManager:
         for city in self.destination_data:
             new_data = {
                 "price": {
-                    "iataCode": city["iataCode"]
+                    "iataCode": city["iataCode"],
+                    "lowestPrice": city["lowestPrice"],
                 }
             }
             requests.put(url=f"{SHEETY_ENDPOINT}/{city['id']}", json=new_data, headers=self.headers)
