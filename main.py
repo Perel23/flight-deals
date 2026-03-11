@@ -1,7 +1,10 @@
 import os
+import time
+from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from data_manager import DataManager
 from flight_search import FlightSearch
+from flight_data import find_cheapest_flight
 from notification_manager import NotificationManager
 from ai_assistant import AIAssistant
 
@@ -16,11 +19,10 @@ notification_manager = NotificationManager()
 ai_assistant = AIAssistant()
 
 sheet_data = data_manager.get_destination_data()
-
 # Fill in any missing data using Gemini
 for row in sheet_data:
-    missing_iata = row["iataCode"] == ""
-    missing_price = row["lowestPrice"] == 0
+    missing_iata = row.get("iataCode", "") == ""
+    missing_price = row.get("lowestPrice", 0) == 0
 
     if missing_iata or missing_price:
         print(f"Incomplete data for '{row['city']}' — asking Gemini...")
@@ -32,51 +34,65 @@ for row in sheet_data:
 
 data_manager.update_destination_codes()
 
+tomorrow = datetime.now() + timedelta(days=1)
+six_month_from_today = datetime.now() + timedelta(days=(6 * 30))
+
 # Check for cheap flights from origin to each destination
 for destination in sheet_data:
-    if not destination["iataCode"]:
+    if not destination.get("iataCode", ""):
         print(f"Skipping {destination['city']} — no IATA code.")
         continue
 
     print(f"Checking flights to {destination['city']}...")
-    cheapest_flight = flight_search.check_flights(ORIGIN_CITY_IATA, destination["iataCode"])
+    flights = flight_search.check_flights(
+        ORIGIN_CITY_IATA,
+        destination["iataCode"],
+        from_time=tomorrow,
+        to_time=six_month_from_today,
+        is_direct=True,
+    )
+    cheapest_flight = find_cheapest_flight(flights, max_stops=0)
 
-    if cheapest_flight is None:
+    if cheapest_flight.price == "N/A":
+        print(f"No direct flight found. Searching for indirect flights to {destination['city']}...")
+        flights = flight_search.check_flights(
+            ORIGIN_CITY_IATA,
+            destination["iataCode"],
+            from_time=tomorrow,
+            to_time=six_month_from_today,
+            is_direct=False,
+        )
+        cheapest_flight = find_cheapest_flight(flights, max_stops=2)
+
+    time.sleep(2)
+
+    if cheapest_flight.price == "N/A":
         print(f"  No flights found.")
         continue
 
-    price = float(cheapest_flight["price"]["grandTotal"])
-    lowest = destination["lowestPrice"]
+    print(f"  £{cheapest_flight.price}")
 
-    if price < lowest:
-        print(f"  Low price alert! £{price} (threshold: £{lowest})")
+    if cheapest_flight.price < destination["lowestPrice"]:
+        print(f"  Low price alert! £{cheapest_flight.price} (threshold: £{destination['lowestPrice']})")
 
-        segments = cheapest_flight["itineraries"][0]["segments"]
-        departure_dt = segments[0]["departure"]["at"]
-        departure_date = departure_dt.split("T")[0]
-        arrival_date = segments[-1]["arrival"]["at"].split("T")[0]
-        stops = len(segments) - 1
-        stops_str = "Direct" if stops == 0 else f"{stops} stop(s)"
-        airlines = ", ".join(set(s["carrierCode"] for s in segments))
-
+        stops_str = "Direct" if cheapest_flight.stops == 0 else f"{cheapest_flight.stops} stop(s)"
         google_flights_link = (
             f"https://www.google.com/travel/flights?q=flights+from+"
-            f"{ORIGIN_CITY_IATA}+to+{destination['iataCode']}+on+{departure_date}"
+            f"{ORIGIN_CITY_IATA}+to+{destination['iataCode']}+on+{cheapest_flight.out_date}"
         )
 
         notification_manager.send_emails(
             email_list=[DESTINATION_EMAIL],
             message=(
                 f"Low price alert!\n\n"
-                f"From:      {ORIGIN_CITY_IATA}\n"
-                f"To:        {destination['city']} ({destination['iataCode']})\n"
-                f"Date:      {departure_date}\n"
-                f"Arrives:   {arrival_date}\n"
-                f"Price:     £{price}\n"
-                f"Stops:     {stops_str}\n"
-                f"Airline(s): {airlines}\n\n"
+                f"From:      {cheapest_flight.origin_airport}\n"
+                f"To:        {destination['city']} ({cheapest_flight.destination_airport})\n"
+                f"Date:      {cheapest_flight.out_date}\n"
+                f"Return:    {cheapest_flight.return_date}\n"
+                f"Price:     £{cheapest_flight.price}\n"
+                f"Stops:     {stops_str}\n\n"
                 f"Search on Google Flights:\n{google_flights_link}"
             )
         )
     else:
-        print(f"  £{price} — not cheaper than threshold £{lowest}.")
+        print(f"  £{cheapest_flight.price} — not cheaper than threshold £{destination['lowestPrice']}.")
