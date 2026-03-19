@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 SHEETY_ENDPOINT = os.getenv("SHEETY_ENDPOINT")
+SHEETY_USERS_ENDPOINT = os.getenv("SHEETY_USERS_ENDPOINT")
 
 class DataManager:
     def __init__(self):
@@ -26,3 +27,8 @@ class DataManager:
                 }
             }
             requests.put(url=f"{SHEETY_ENDPOINT}/{city['id']}", json=new_data, headers=self.headers)
+
+    def get_customer_emails(self):
+        response = requests.get(url=SHEETY_USERS_ENDPOINT, headers=self.headers)
+        data = response.json()
+        return [user["email"] for user in data["users"]]

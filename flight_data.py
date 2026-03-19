@@ -11,7 +11,7 @@ class FlightData:
         self.via_city = via_city if via_city else []
 
 
-def find_cheapest_flight(data, max_stops=0):
+def find_cheapest_flight(data, max_stops=2):
     if data is None or not data['data']:
         print("No flight data")
         return FlightData("N/A", "N/A", "N/A", "N/A", "N/A")
@@ -32,7 +32,7 @@ def find_cheapest_flight(data, max_stops=0):
             origin = segments[0]["departure"]["iataCode"]
             destination = segments[-1]["arrival"]["iataCode"]
             out_date = segments[0]["departure"]["at"].split("T")[0]
-            return_date = flight["itineraries"][1]["segments"][0]["departure"]["at"].split("T")[0]
+            return_date = flight["itineraries"][1]["segments"][0]["departure"]["at"].split("T")[0] if len(flight["itineraries"]) > 1 else "N/A"
             via_city = [seg["arrival"]["iataCode"] for seg in segments[:-1]]
             cheapest_flight = FlightData(lowest_price, origin, destination, out_date, return_date, num_stops, via_city)
             print(f"Lowest price to {destination} is £{lowest_price}")

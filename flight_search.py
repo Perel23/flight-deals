@@ -1,6 +1,7 @@
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
+import time
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -49,24 +50,35 @@ class FlightSearch:
             return "Not Found"
         return code
 
-    def check_flights(self, origin_city_code, destination_city_code, from_time, to_time, is_direct=True):
+    def check_flights(self, origin_city_code, destination_city_code):
         headers = {"Authorization": f"Bearer {self._token}"}
-        query = {
-            "originLocationCode": origin_city_code,
-            "destinationLocationCode": destination_city_code,
-            "departureDate": from_time.strftime("%Y-%m-%d"),
-            "returnDate": to_time.strftime("%Y-%m-%d"),
-            "adults": 1,
-            "nonStop": "true" if is_direct else "false",
-            "currencyCode": "GBP",
-            "max": "10",
-        }
-        response = requests.get(url=FLIGHT_ENDPOINT, headers=headers, params=query)
+        all_flights = []
 
-        if response.status_code != 200:
-            print(f"check_flights() response code: {response.status_code}")
-            print("There was a problem with the flight search.")
-            print("Response body:", response.text)
+        for week_offset in range(1, 27):
+            departure_date = (datetime.now() + timedelta(weeks=week_offset)).strftime("%Y-%m-%d")
+            query = {
+                "originLocationCode": origin_city_code,
+                "destinationLocationCode": destination_city_code,
+                "departureDate": departure_date,
+                "adults": 1,
+                "currencyCode": "GBP",
+                "max": "5",
+            }
+            response = requests.get(url=FLIGHT_ENDPOINT, headers=headers, params=query)
+
+            if response.status_code != 200:
+                print(f"  {departure_date}: response code {response.status_code}")
+                time.sleep(2)
+                continue
+
+            data = response.json().get("data", [])
+            if data:
+                all_flights.extend(data)
+                print(f"  {departure_date}: found {len(data)} flight(s)")
+
+            time.sleep(2)
+
+        if not all_flights:
             return None
 
-        return response.json()
+        return {"data": all_flights}
